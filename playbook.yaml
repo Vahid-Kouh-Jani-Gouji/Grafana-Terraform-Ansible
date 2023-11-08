@@ -1,0 +1,46 @@
+---
+- name: Install Grafana
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update package cache and upgrade system packages
+      yum:
+        name: '*'
+        state: latest
+
+    - name: Add Grafana YUM repository
+      yum_repository:
+        name: grafana
+        description: Grafana Stable Repository
+        baseurl: https://packages.grafana.com/oss/rpm
+        gpgcheck: yes
+        gpgkey: https://packages.grafana.com/gpg.key
+
+    - name: Install Grafana package
+      yum:
+        name: grafana
+        state: present
+
+    - name: Copy Grafana configuration file from GitHub
+      get_url:
+        url: https://raw.githubusercontent.com/martindubb/random-stuff/main/grafana/grafana.ini
+        dest: /etc/grafana/grafana.ini
+      notify: Reload Grafana
+
+    - name: Ensure Grafana systemd unit is running
+      systemd:
+        name: grafana-server
+        enabled: yes
+        state: started
+      notify: Restart Grafana
+
+  handlers:
+    - name: Reload Grafana
+      service:
+        name: grafana-server
+        state: reloaded
+
+    - name: Restart Grafana
+      service:
+        name: grafana-server
+        state: restarted
